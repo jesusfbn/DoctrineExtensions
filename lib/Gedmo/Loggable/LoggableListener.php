@@ -3,6 +3,7 @@
 namespace Gedmo\Loggable;
 
 use Doctrine\Common\EventArgs;
+use Doctrine\DBAL\Types\Type;
 use Gedmo\Mapping\MappedEventSubscriber;
 use Gedmo\Loggable\Mapping\Event\LoggableAdapter;
 use Gedmo\Tool\Wrapper\AbstractWrapper;
@@ -247,7 +248,18 @@ class LoggableListener extends MappedEventSubscriber
                     }
                 }
             }
-            $newValues[$field] = $value;
+
+            $type = $meta->getTypeOfField($field);
+            if (is_string($type)) {
+                $type = Type::getType($type);
+            }
+
+            if ($type instanceof Type) {
+                $platform = $om->getConnection()->getDatabasePlatform();
+                $newValues[$field] = $type->convertToDatabaseValue($value, $platform);
+            } else {
+                $newValues[$field] = $value;
+            }
         }
 
         return $newValues;
